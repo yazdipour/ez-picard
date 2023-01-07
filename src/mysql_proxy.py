@@ -7,6 +7,8 @@ import re
 class MySQLProxy:
 
     def __init__(self, connection_string):
+        if not connection_string:
+            raise ValueError("Connection string is empty")
 
         # Compile the regular expression pattern
         pattern = re.compile(
@@ -31,11 +33,9 @@ class MySQLProxy:
             database=config["database"]
         )
 
-    def convert(self):
+    def convert(self, base_path: str = '/database', sqlite_name=str(uuid.uuid4().hex)):
         mysql_cursor = self.mysql_conn.cursor()
-        # Connect to the SQLite database
-        sqlite_name = f'{str(uuid.uuid4().hex)}.sqlite'
-        sqlite_db_path = f'/database/{sqlite_name}'
+        sqlite_db_path = f'{base_path}/{sqlite_name}/{sqlite_name}.sqlite'
         sqlite_conn = sqlite3.connect(sqlite_db_path)
         sqlite_cursor = sqlite_conn.cursor()
 

@@ -1,10 +1,8 @@
-# Set up logging
 import shutil
-from typing import List, Optional, Union
-from sqlite3 import connect, OperationalError
+from typing import Optional
 from seq2seq.utils.dataset import DataTrainingArguments
 from seq2seq.utils.picard_model_wrapper import PicardArguments, PicardLauncher, with_picard
-from seq2seq.utils.pipeline import Text2SQLGenerationPipeline, Text2SQLInput, get_schema
+from seq2seq.utils.pipeline import Text2SQLGenerationPipeline, Text2SQLInput
 from sqlite3 import Connection, connect, OperationalError
 from uvicorn import run
 from fastapi import FastAPI, HTTPException, Body, File, UploadFile
@@ -14,12 +12,12 @@ from contextlib import nullcontext
 import os
 from pydantic import BaseModel
 from dataclasses import dataclass, field
-from typing import Optional, Dict
 import sys
 import logging
 from mysql_proxy import MySQLProxy
 import utils2
 
+# Set up logging
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
     datefmt="%m/%d/%Y %H:%M:%S",
@@ -36,7 +34,7 @@ class BackendArguments:
     """
 
     model_path: str = field(
-        default="tscholak/cxmefzzi",
+        default="tscholak/1zha5ono",
         metadata={"help": "Path to pretrained model"},
     )
     cache_dir: Optional[str] = field(
@@ -52,7 +50,7 @@ class BackendArguments:
     port: int = field(default=8000, metadata={
                       "help": "Bind socket to this port"})
     device: int = field(
-        default=0,
+        default=-1,
         metadata={
             "help": "Device ordinal for CPU/GPU supports. Setting this to -1 will leverage CPU. A non-negative value will run the model on the corresponding CUDA device id."
         },
@@ -137,7 +135,7 @@ def main():
                 )
 
         @app.get("/ask/{db_id}/{question}")
-        def ask(db_id: str, question: str):
+        def ask(db_id: str = 'chinook', question: str = 'how many singers we have?'):
             try:
                 outputs = pipe(
                     inputs=Text2SQLInput(utterance=question, db_id=db_id),
@@ -146,14 +144,15 @@ def main():
             except OperationalError as e:
                 raise HTTPException(status_code=404, detail=e.args[0])
             try:
-                conn = connect(f"{backend_args.db_path}/{db_id}.sqlite")
+                conn = connect(
+                    f"{backend_args.db_path}/{db_id}/{db_id}.sqlite")
                 return [response(query=output["generated_text"], conn=conn) for output in outputs]
             finally:
                 conn.close()
 
-        # post request that gets configs, db_id and question and model_path
+        # # post request that gets configs, db_id and question and model_path
         @app.post("/ask/{db_id}/{question}")
-        async def ask(db_id: str, question: str, config: dict = Body(...)):
+        async def ask(db_id: str = 'chinook', question: str = 'how many singers we have?', config: dict = Body(...)):
             try:
                 model = model_cls_wrapper(AutoModelForSeq2SeqLM).from_pretrained(
                     config["model_path"],
@@ -184,38 +183,23 @@ def main():
             finally:
                 conn.close()
 
-        # an endpoint to connect to mysql database and clone it to sqlite without data only schema using mysql_proxy
-        @app.post("/proxy/mysql/")
-        async def proxy_mysql(config: dict = Body(...)):
-            try:
-                mysql_proxy = MySQLProxy(
-                    host=config["host"],
-                    port=config["port"],
-                    user=config["user"],
-                    password=config["password"],
-                    database=config["database"],
-                    db_path=backend_args.db_path,
-                )
-                global sqlite_name
-                sqlite_name = mysql_proxy.convert()
-                global is_mysql
-                is_mysql = True
-            except OperationalError as e:
-                raise HTTPException(status_code=404, detail=e.args[0])
+        # # an endpoint to connect to mysql database and clone it to sqlite without data only schema using mysql_proxy
+        @app.post("/proxy/")
+        async def proxy(connection_string: str = "mysql://root:root@mysql:3306/Chinook"):
+            mysql_proxy = MySQLProxy(connection_string)
+            return mysql_proxy.convert(backend_args.db_path)
 
-        # an endpoint to upload sqlite database to the server in /database folder
         @app.post("/upload/")
         async def upload(file: UploadFile = File(...)):
-            global is_mysql
-            is_mysql = False
             try:
-                utils2.delete_files(backend_args.db_path, "Chinook.sqlite")
+                utils2.delete_folders(backend_args.db_path, "chinook")
+                with open(f'{backend_args.db_path}/{file.filename.split(".")[0]}/{file.filename}', 'wb') as f:
+                    shutil.copyfileobj(file.file, f)
             except Exception:
-                print("no file to delete")
-            with open(f"{backend_args.db_path}/{file.filename}", "wb") as buffer:
-                shutil.copyfileobj(file.file, buffer)
-            # Return a 200 response
-            return {'status': 'success'}
+                return {"message": "There was an error uploading the file"}
+            finally:
+                file.file.close()
+            return {"message": f"Successfully uploaded {file.filename}"}
 
     # Run app
     run(app=app, host=backend_args.host, port=backend_args.port)
