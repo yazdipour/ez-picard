@@ -1,0 +1,31 @@
+services:
+  ez-picard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: "text-to-sql-ez-picard:latest"
+    command: sh -c "pyfiglet 'EZ-PICARD' ; python seq2seq/serve_seq2seq.py configs/serve.json"
+    user: "13011:13011"
+    ports:
+      - "8000:8000"
+    volumes:
+      - type: bind
+        source: "./database"
+        target: /database
+      - type: bind
+        source: "./transformers_cache"
+        target: /transformers_cache
+      - type: bind
+        source: "./configs"
+        target: /app/configs
+    depends_on:
+      - mysql
+    
+  mysql:
+    build: ./mysql
+    ports:
+     - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: 'root'
+      MYSQL_DATABASE: 'Chinook'    
+    

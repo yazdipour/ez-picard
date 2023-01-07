@@ -13,8 +13,7 @@ ez-build:
 # 	docker pull $(EVAL_IMAGE_NAME):$(GIT_HEAD_REF)
 
 .PHONY: ez-run
-ez-run: 
-# pull-eval-image
+ez-run: ez-build
 	mkdir -p -m 777 database
 	mkdir -p -m 777 transformers_cache
 	docker run \
@@ -27,3 +26,8 @@ ez-run:
 		--mount type=bind,source=$(BASE_DIR)/configs,target=/app/configs \
 		$(EVAL_IMAGE_NAME):$(GIT_HEAD_REF) \
 		/bin/bash -c "python seq2seq/serve_seq2seq.py configs/serve.json"
+
+.PHONY: dc
+dc:
+	docker-compose build ez-picard
+	docker-compose up
