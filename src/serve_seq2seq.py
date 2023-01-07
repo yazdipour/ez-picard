@@ -42,7 +42,7 @@ class BackendArguments:
         metadata={"help": "Where to cache pretrained models and data"},
     )
     db_path: str = field(
-        default="database",
+        default="/database",
         metadata={"help": "Where to to find the sqlite files"},
     )
     host: str = field(default="0.0.0.0", metadata={
