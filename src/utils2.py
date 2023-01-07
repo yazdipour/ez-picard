@@ -1,7 +1,13 @@
 import os
+import shutil
 
 
-def delete_files(path, filename_to_keep):
-    # Delete all the files in the directory except for "test.sqlite"
-    [os.remove(f'{path}/{file}')
-     for file in os.listdir(path) if file != filename_to_keep]
+def delete_folders(path, dir_to_keep):
+    # get a list of all the subdirectories in the specified path
+    subdirectories = [d for d in os.listdir(
+        path) if os.path.isdir(os.path.join(path, d))]
+    for subdir in subdirectories:
+        if subdir == dir_to_keep:
+            continue
+        subdir_path = os.path.join(path, subdir)
+        shutil.rmtree(subdir_path)
