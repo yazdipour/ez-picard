@@ -28,40 +28,39 @@ class MySQLProxy:
             password=config["password"],
             host=config["host"],
             port=config["port"],
-            database=config["database"],
+            database=config["database"]
         )
 
+    def convert(self):
+        mysql_cursor = self.mysql_conn.cursor()
+        # Connect to the SQLite database
+        sqlite_name = f'{str(uuid.uuid4().hex)}.sqlite'
+        sqlite_db_path = f'/database/{sqlite_name}'
+        sqlite_conn = sqlite3.connect(sqlite_db_path)
+        sqlite_cursor = sqlite_conn.cursor()
 
-def convert(self):
-    mysql_cursor = self.mysql_conn.cursor()
-    # Connect to the SQLite database
-    sqlite_name = f'{str(uuid.uuid4().hex)}.sqlite'
-    sqlite_db_path = f'./database/{sqlite_name}'
-    sqlite_conn = sqlite3.connect(sqlite_db_path)
-    sqlite_cursor = sqlite_conn.cursor()
+        # Retrieve the list of tables in the MySQL database
+        mysql_cursor.execute("SHOW TABLES")
+        tables = mysql_cursor.fetchall()
+        # Iterate through the list of tables and create them in the SQLite database
+        for table in tables:
+            table_name = table[0]
 
-    # Retrieve the list of tables in the MySQL database
-    mysql_cursor.execute("SHOW TABLES")
-    tables = mysql_cursor.fetchall()
-    # Iterate through the list of tables and create them in the SQLite database
-    for table in tables:
-        table_name = table[0]
+            # Retrieve the structure of the table
+            mysql_cursor.execute(f"DESCRIBE {table_name}")
+            structure = mysql_cursor.fetchall()
 
-        # Retrieve the structure of the table
-        mysql_cursor.execute(f"DESCRIBE {table_name}")
-        structure = mysql_cursor.fetchall()
+            # Create the table in the SQLite database
+            sql = f"CREATE TABLE {table_name} ("
+            for column in structure:
+                column_name = column[0]
+                column_type = column[1]
+                sql += f"{column_name} {column_type}, "
+            sql = f"{sql[:-2]})"
+            sqlite_cursor.execute(sql)
 
-        # Create the table in the SQLite database
-        sql = f"CREATE TABLE {table_name} ("
-        for column in structure:
-            column_name = column[0]
-            column_type = column[1]
-            sql += f"{column_name} {column_type}, "
-        sql = f"{sql[:-2]})"
-        sqlite_cursor.execute(sql)
-
-    # Save the changes to the SQLite database and close the connections
-    sqlite_conn.commit()
-    self.mysql_conn.close()
-    sqlite_conn.close()
-    return sqlite_name
+        # Save the changes to the SQLite database and close the connections
+        sqlite_conn.commit()
+        self.mysql_conn.close()
+        sqlite_conn.close()
+        return sqlite_name
