@@ -26,5 +26,4 @@ ez-run:
 		--mount type=bind,source=$(BASE_DIR)/transformers_cache,target=/transformers_cache \
 		--mount type=bind,source=$(BASE_DIR)/configs,target=/app/configs \
 		$(EVAL_IMAGE_NAME):$(GIT_HEAD_REF) \
-		/bin/bash
-		# /bin/bash -c "python seq2seq/serve_seq2seq.py configs/serve.json"
+		/bin/bash -c "python seq2seq/serve_seq2seq.py configs/serve.json"
