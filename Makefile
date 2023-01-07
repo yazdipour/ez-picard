@@ -31,3 +31,8 @@ ez-run: ez-build
 dc:
 	docker-compose build ez-picard
 	docker-compose up
+
+.PHONY: dz
+dz:
+	docker-compose build ez-picard
+	docker-compose up ez-picard
