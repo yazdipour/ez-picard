@@ -1,3 +1,4 @@
+from fastapi.openapi.utils import get_openapi
 import shutil
 from typing import Optional
 from seq2seq.utils.dataset import DataTrainingArguments
@@ -122,6 +123,20 @@ def main():
         # Initialize REST API
         app = FastAPI()
 
+        def custom_openapi():
+            if app.openapi_schema:
+                return app.openapi_schema
+            openapi_schema = get_openapi(
+                title="EZ-PICARD",
+                version="0.0.1",
+                description="EZ-PICARD is a eazy implementation of the PICARD framework for text-to-SQL generation.",
+                routes=app.routes,
+            )
+            app.openapi_schema = openapi_schema
+            return app.openapi_schema
+
+        app.openapi = custom_openapi
+
         class AskResponse(BaseModel):
             query: str
             execution_results: list
@@ -142,7 +157,7 @@ def main():
                     num_return_sequences=data_training_args.num_return_sequences,
                 )
             except OperationalError as e:
-                raise HTTPException(status_code=404, detail=e.args[0])
+                raise HTTPException(status_code=404, detail=e)
             try:
                 conn = connect(
                     f"{backend_args.db_path}/{db_id}/{db_id}.sqlite")
@@ -175,7 +190,7 @@ def main():
                     num_return_sequences=config["num_return_sequences"],
                 )
             except OperationalError as e:
-                raise HTTPException(status_code=404, detail=e.args[0])
+                raise HTTPException(status_code=404, detail=e)
             try:
                 conn = connect(
                     f"{backend_args.db_path}/{db_id}.sqlite")
@@ -183,7 +198,6 @@ def main():
             finally:
                 conn.close()
 
-        # # an endpoint to connect to mysql database and clone it to sqlite without data only schema using mysql_proxy
         @app.post("/proxy/")
         async def proxy(connection_string: str = "mysql://root:root@mysql:3306/Chinook"):
             mysql_proxy = MySQLProxy(connection_string)
@@ -193,10 +207,12 @@ def main():
         async def upload(file: UploadFile = File(...)):
             try:
                 utils2.delete_folders(backend_args.db_path, "chinook")
-                with open(f'{backend_args.db_path}/{file.filename.split(".")[0]}/{file.filename}', 'wb') as f:
+                path = f'{backend_args.db_path}/{file.filename.split(".")[0]}'
+                os.makedirs(path, exist_ok=True)
+                with open(f'{path}/{file.filename}', 'wb') as f:
                     shutil.copyfileobj(file.file, f)
-            except Exception:
-                return {"message": "There was an error uploading the file"}
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=e)
             finally:
                 file.file.close()
             return {"message": f"Successfully uploaded {file.filename}"}

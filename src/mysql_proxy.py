@@ -2,6 +2,7 @@ import mysql.connector
 import sqlite3
 import uuid
 import re
+import os
 
 
 class MySQLProxy:
@@ -34,12 +35,13 @@ class MySQLProxy:
         )
 
     def convert(self, base_path: str = '/database', sqlite_name=str(uuid.uuid4().hex)):
-        mysql_cursor = self.mysql_conn.cursor()
-        sqlite_db_path = f'{base_path}/{sqlite_name}/{sqlite_name}.sqlite'
-        sqlite_conn = sqlite3.connect(sqlite_db_path)
+        sqlite_db_path = f'{base_path}/{sqlite_name}'
+        os.makedirs(sqlite_db_path, exist_ok=True)
+        sqlite_conn = sqlite3.connect(f'{sqlite_db_path}/{sqlite_name}.sqlite')
         sqlite_cursor = sqlite_conn.cursor()
 
         # Retrieve the list of tables in the MySQL database
+        mysql_cursor = self.mysql_conn.cursor()
         mysql_cursor.execute("SHOW TABLES")
         tables = mysql_cursor.fetchall()
         # Iterate through the list of tables and create them in the SQLite database
