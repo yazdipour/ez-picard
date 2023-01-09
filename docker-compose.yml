@@ -1,5 +1,16 @@
 services:
-  ez-picard:
+  websrc:
+    build:
+      context: ./websrc
+      dockerfile: Dockerfile
+    image: "text-to-sql-ez-picard-ui:latest"
+    # command: sh -c "streamlit run app.py --server.port 8501"
+    ports:
+      - '8501:8501'
+    depends_on:
+      - api
+
+  api:
     build:
       context: .
       dockerfile: Dockerfile
@@ -27,5 +38,5 @@ services:
      - "3306:3306"
     environment:
       MYSQL_ROOT_PASSWORD: 'root'
-      MYSQL_DATABASE: 'Chinook'    
+      MYSQL_DATABASE: 'Chinook'
     

@@ -29,10 +29,10 @@ ez-run: ez-build
 
 .PHONY: dc
 dc:
-	docker-compose build ez-picard
+	docker-compose build api
 	docker-compose up
 
 .PHONY: dz
 dz:
-	docker-compose build ez-picard
-	docker-compose up ez-picard
+	docker-compose build api
+	docker-compose up api
