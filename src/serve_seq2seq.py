@@ -206,7 +206,7 @@ def main():
         @app.post("/upload/")
         async def upload(file: UploadFile = File(...)):
             try:
-                utils2.delete_folders(backend_args.db_path, "chinook")
+                # utils2.delete_folders(backend_args.db_path, "chinook")
                 path = f'{backend_args.db_path}/{file.filename.split(".")[0]}'
                 os.makedirs(path, exist_ok=True)
                 with open(f'{path}/{file.filename}', 'wb') as f:
