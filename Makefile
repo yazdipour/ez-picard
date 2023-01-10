@@ -8,9 +8,9 @@ BASE_DIR := $(shell pwd)
 ez-build:
 	docker build -t $(EVAL_IMAGE_NAME):$(GIT_HEAD_REF) -f Dockerfile .
 
-# .PHONY: pull-eval-image
-# pull-eval-image:
-# 	docker pull $(EVAL_IMAGE_NAME):$(GIT_HEAD_REF)
+.PHONY: pull-eval-image
+pull-eval-image:
+	docker pull $(EVAL_IMAGE_NAME):$(GIT_HEAD_REF)
 
 .PHONY: ez-run
 ez-run: ez-build
