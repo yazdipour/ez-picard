@@ -4,7 +4,6 @@ services:
       context: ./websrc
       dockerfile: Dockerfile
     image: "text-to-sql-ez-picard-ui:latest"
-    # command: sh -c "streamlit run app.py --server.port 8501"
     ports:
       - '8501:8501'
     depends_on:

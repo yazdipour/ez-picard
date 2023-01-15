@@ -149,6 +149,11 @@ def main():
                     status_code=500, detail=f'while executing "{query}", the following error occurred: {e.args[0]}'
                 )
 
+        # get request shows the available databases
+        @app.get("/dbs")
+        def dbs():
+            return [db for db in os.listdir(backend_args.db_path) if os.path.isdir(os.path.join(backend_args.db_path, db))]
+
         @app.get("/ask/{db_id}/{question}")
         def ask(db_id: str = 'chinook', question: str = 'how many singers we have?'):
             try:

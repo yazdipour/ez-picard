@@ -1,7 +1,11 @@
 GIT_HEAD_REF := $(shell git rev-parse HEAD)
+GIT_HEAD_REF := latest
+GIT_HEAD_REF := 6a252386bed6d4233f0f13f4562d8ae8608e7445
 
 EVAL_IMAGE_NAME := text-to-sql-ez-picard
 DOCKERHUB_USER := shayazdipour
+EVAL_IMAGE_NAME := tscholak/text-to-sql-eval
+
 BASE_DIR := $(shell pwd)
 
 .PHONY: ez-build
@@ -13,7 +17,7 @@ pull-eval-image:
 	docker pull $(EVAL_IMAGE_NAME):$(GIT_HEAD_REF)
 
 .PHONY: ez-run
-ez-run: ez-build
+ez-run: pull-eval-image
 	mkdir -p -m 777 database
 	mkdir -p -m 777 transformers_cache
 	docker run \
@@ -27,12 +31,12 @@ ez-run: ez-build
 		$(EVAL_IMAGE_NAME):$(GIT_HEAD_REF) \
 		/bin/bash -c "python seq2seq/serve_seq2seq.py configs/serve.json"
 
-.PHONY: dc
-dc:
+.PHONY: api
+api:
 	docker-compose build api
 	docker-compose up
 
-.PHONY: dz
-dz:
+.PHONY: onlyapi
+onlyapi:
 	docker-compose build api
 	docker-compose up api
