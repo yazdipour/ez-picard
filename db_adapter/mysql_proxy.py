@@ -4,6 +4,11 @@ import uuid
 import re
 import os
 
+# @app.post("/proxy/")
+# async def proxy(connection_string: str = "mysql://root:root@mysql:3306/Chinook"):
+#     mysql_proxy = MySQLProxy(connection_string)
+#     return mysql_proxy.convert(backend_args.db_path)
+
 
 class MySQLProxy:
 

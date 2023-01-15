@@ -13,4 +13,6 @@ RUN apt-get update && apt-get install -y \
 COPY . /app
 RUN pip3 install -r requirements.txt
 
+CMD ["pyfiglet 'EZ-PICARD'"]
+
 ENTRYPOINT ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]

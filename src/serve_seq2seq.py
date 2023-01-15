@@ -15,10 +15,7 @@ from pydantic import BaseModel
 from dataclasses import dataclass, field
 import sys
 import logging
-from mysql_proxy import MySQLProxy
-import utils2
 
-# Set up logging
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
     datefmt="%m/%d/%Y %H:%M:%S",
@@ -56,6 +53,17 @@ class BackendArguments:
             "help": "Device ordinal for CPU/GPU supports. Setting this to -1 will leverage CPU. A non-negative value will run the model on the corresponding CUDA device id."
         },
     )
+
+
+def delete_folders(path, dir_to_keep):
+    # get a list of all the subdirectories in the specified path
+    subdirectories = [d for d in os.listdir(
+        path) if os.path.isdir(os.path.join(path, d))]
+    for subdir in subdirectories:
+        if subdir == dir_to_keep:
+            continue
+        subdir_path = os.path.join(path, subdir)
+        shutil.rmtree(subdir_path)
 
 
 def main():
@@ -149,11 +157,6 @@ def main():
                     status_code=500, detail=f'while executing "{query}", the following error occurred: {e.args[0]}'
                 )
 
-        # get request shows the available databases
-        @app.get("/dbs")
-        def dbs():
-            return [db for db in os.listdir(backend_args.db_path) if os.path.isdir(os.path.join(backend_args.db_path, db))]
-
         @app.get("/ask/{db_id}/{question}")
         def ask(db_id: str = 'chinook', question: str = 'how many singers we have?'):
             try:
@@ -162,7 +165,7 @@ def main():
                     num_return_sequences=data_training_args.num_return_sequences,
                 )
             except OperationalError as e:
-                raise HTTPException(status_code=404, detail=e)
+                raise HTTPException(status_code=404, detail=e.args[0])
             try:
                 conn = connect(
                     f"{backend_args.db_path}/{db_id}/{db_id}.sqlite")
@@ -170,48 +173,14 @@ def main():
             finally:
                 conn.close()
 
-        # # post request that gets configs, db_id and question and model_path
-        @app.post("/ask/{db_id}/{question}")
-        async def ask(db_id: str = 'chinook', question: str = 'how many singers we have?', config: dict = Body(...)):
-            try:
-                model = model_cls_wrapper(AutoModelForSeq2SeqLM).from_pretrained(
-                    config["model_path"],
-                    config=config,
-                    cache_dir=backend_args.cache_dir,
-                )
-                pipe = Text2SQLGenerationPipeline(
-                    model=model,
-                    tokenizer=tokenizer,
-                    db_path=backend_args.db_path,
-                    prefix=data_training_args.source_prefix,
-                    normalize_query=data_training_args.normalize_query,
-                    schema_serialization_type=data_training_args.schema_serialization_type,
-                    schema_serialization_with_db_id=data_training_args.schema_serialization_with_db_id,
-                    schema_serialization_with_db_content=data_training_args.schema_serialization_with_db_content,
-                    device=backend_args.device,
-                )
-                outputs = pipe(
-                    inputs=Text2SQLInput(utterance=question, db_id=db_id),
-                    num_return_sequences=config["num_return_sequences"],
-                )
-            except OperationalError as e:
-                raise HTTPException(status_code=404, detail=e)
-            try:
-                conn = connect(
-                    f"{backend_args.db_path}/{db_id}.sqlite")
-                return [response(query=output["generated_text"], conn=conn) for output in outputs]
-            finally:
-                conn.close()
-
-        @app.post("/proxy/")
-        async def proxy(connection_string: str = "mysql://root:root@mysql:3306/Chinook"):
-            mysql_proxy = MySQLProxy(connection_string)
-            return mysql_proxy.convert(backend_args.db_path)
+        @app.get("/dbs")
+        def dbs():
+            return [db for db in os.listdir(backend_args.db_path) if os.path.isdir(os.path.join(backend_args.db_path, db))]
 
         @app.post("/upload/")
         async def upload(file: UploadFile = File(...)):
             try:
-                # utils2.delete_folders(backend_args.db_path, "chinook")
+                # delete_folders(backend_args.db_path, "chinook")
                 path = f'{backend_args.db_path}/{file.filename.split(".")[0]}'
                 os.makedirs(path, exist_ok=True)
                 with open(f'{path}/{file.filename}', 'wb') as f:
@@ -222,8 +191,49 @@ def main():
                 file.file.close()
             return {"message": f"Successfully uploaded {file.filename}"}
 
-    # Run app
-    run(app=app, host=backend_args.host, port=backend_args.port)
+        # # post request that gets configs, db_id and question and model_path
+        @app.post("/ask/{db_id}/{question}")
+        def ask(db_id: str = 'chinook', question: str = 'how many singers we have?', backend_args: dict = Body(...)):
+            try:
+                config = AutoConfig.from_pretrained(
+                    backend_args['model_path'],
+                    cache_dir=backend_args['cache_dir'],
+                    max_length=data_training_args.max_target_length,
+                    num_beams=data_training_args.num_beams,
+                    num_beam_groups=data_training_args.num_beam_groups,
+                    diversity_penalty=data_training_args.diversity_penalty,
+                )
+                model = model_cls_wrapper(AutoModelForSeq2SeqLM).from_pretrained(
+                    backend_args["model_path"],
+                    config=config,
+                    cache_dir=backend_args['cache_dir'],
+                )
+                pipe = Text2SQLGenerationPipeline(
+                    model=model,
+                    tokenizer=tokenizer,
+                    db_path=backend_args['db_path'],
+                    prefix=data_training_args.source_prefix,
+                    normalize_query=data_training_args.normalize_query,
+                    schema_serialization_type=data_training_args.schema_serialization_type,
+                    schema_serialization_with_db_id=data_training_args.schema_serialization_with_db_id,
+                    schema_serialization_with_db_content=data_training_args.schema_serialization_with_db_content,
+                    device=backend_args['device'],
+                )
+                outputs = pipe(
+                    inputs=Text2SQLInput(utterance=question, db_id=db_id),
+                    num_return_sequences=1,
+                )
+            except OperationalError as e:
+                raise HTTPException(status_code=404, detail=e)
+            try:
+                conn = connect(
+                    f"{backend_args.db_path}/{db_id}/{db_id}.sqlite")
+                return [response(query=output["generated_text"], conn=conn) for output in outputs]
+            finally:
+                conn.close()
+
+        # Run app
+        run(app=app, host=backend_args.host, port=backend_args.port)
 
 
 if __name__ == "__main__":

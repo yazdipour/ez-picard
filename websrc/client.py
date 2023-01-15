@@ -1,7 +1,20 @@
 import requests
 import os
 
-BASE_URL = 'http://127.0.0.1:8000'
+BASE_URL = 'http://api:8000'
+HEADERS = {'accept': 'application/json'}
+
+
+def get_list_dbs():
+    url = f"{BASE_URL}/dbs"
+    response = requests.get(url, headers=HEADERS)
+    return response.json()
+
+
+def get_translate(question: str, db_id: str):
+    url = f"{BASE_URL}/ask/{db_id}/{question}"
+    response = requests.get(url, headers=HEADERS)
+    return response.json()
 
 
 def upload(file: bytes):
