@@ -65,17 +65,20 @@ with st.sidebar:
             url="https://github.com/yazdipour/ez-picard/"
         )
     with st.expander("🧊 Models", True):
-        model_radio = st.radio("Choose Text2SQL model to use:",
-                               models_list.keys(), index=0, key="model_type")
-        if model_radio:
+        if model_radio := st.radio(
+            "Choose Text2SQL model to use:",
+            models_list.keys(),
+            index=0,
+            key="model_type",
+        ):
             translator = setup_pipeline(models_list[model_radio])
 
     with st.expander("🧩 Examples", True):
         if st.button("What are the names?"):
-            st.session_state['text_question'] = "What are the name of the singers?"
-            st.session_state['text_db_id'] = "chinook"
-            st.session_state['text_schema'] = '[{"name": "addressLine1", "table": "customers"}, {"name": "addressLine2", "table": "customers"}, {"name": "city", "table": "customers"}, {"name": "contactFirstName", "table": "customers"}, {"name": "contactLastName", "table": "customers"}, {"name": "country", "table": "customers"}, {"name": "creditLimit", "table": "customers"}, {"name": "customerName", "table": "customers"}, {"name": "customerNumber", "table": "customers"}, {"name": "phone", "table": "customers"}, {"name": "postalCode", "table": "customers"}, {"name": "salesRepEmployeeNumber", "table": "customers"}, {"name": "state", "table": "customers"}, {"name": "email", "table": "employees"}, {"name": "employeeNumber", "table": "employees"}, {"name": "extension", "table": "employees"}, {"name": "firstName", "table": "employees"}, {"name": "jobTitle", "table": "employees"}, {"name": "lastName", "table": "employees"}, {"name": "officeCode", "table": "employees"}, {"name": "reportsTo", "table": "employees"}, {"name": "addressLine1", "table": "offices"}, {"name": "addressLine2", "table": "offices"}, {"name": "city", "table": "offices"}, {"name": "country", "table": "offices"}, {"name": "officeCode", "table": "offices"}, {"name": "phone", "table": "offices"}, {"name": "postalCode", "table": "offices"}, {"name": "state", "table": "offices"}, {"name": "territory", "table": "offices"}, {"name": "orderLineNumber", "table": "orderdetails"}, {"name": "orderNumber", "table": "orderdetails"}, {"name": "priceEach", "table": "orderdetails"}, {"name": "productCode", "table": "orderdetails"}, {"name": "quantityOrdered", "table": "orderdetails"}, {"name": "comments", "table": "orders"}, {"name": "customerNumber", "table": "orders"}, {"name": "orderDate", "table": "orders"}, {"name": "orderNumber", "table": "orders"}, {"name": "requiredDate", "table": "orders"}, {"name": "shippedDate", "table": "orders"}, {"name": "status", "table": "orders"}, {"name": "amount", "table": "payments"}, {"name": "checkNumber", "table": "payments"}, {"name": "customerNumber", "table": "payments"}, {"name": "paymentDate", "table": "payments"}, {"name": "htmlDescription", "table": "productlines"}, {"name": "image", "table": "productlines"}, {"name": "productLine", "table": "productlines"}, {"name": "textDescription", "table": "productlines"}, {"name": "buyPrice", "table": "products"}, {"name": "MSRP", "table": "products"}, {"name": "productCode", "table": "products"}, {"name": "productDescription", "table": "products"}, {"name": "productLine", "table": "products"}, {"name": "productName", "table": "products"}, {"name": "productScale", "table": "products"}, {"name": "productVendor", "table": "products"}, {"name": "quantityInStock", "table": "products"}]'
-
+            st.session_state['text_question'] = 'Give me field and username of changelogs of fixed issues in version "0.13"'
+            st.session_state['text_db_id'] = "apache-pig"
+            st.session_state[
+                'text_schema'] = 'jira_repository : key , base_url | git_repository : git_repository_id , name , url , checkout_hash | meta : key , value | issue : issue_id , type , created_date , created_date_zoned , updated_date , updated_date_zoned , resolved_date , resolved_date_zoned , summary , description , priority , status , resolution , assignee , assignee_username , reporter , reporter_username | code_change : commit_hash foreign key change_set  , file_path , old_file_path , change_type , patch_type , is_deleted , sum_added_lines , sum_removed_lines | issue_attachment : issue_id foreign key issue  , username , display_name , created_date , created_date_zoned , mime_type , content , filename , size_bytes | issue_changelog : issue_id foreign key issue  , username , display_name , created_date , created_date_zoned , group_id , field_type , field ( Version ) , from_value , from_string ( 0.12.1 , patch ) , to_value , to_string ( 0.12.1 , patch ) | issue_comment : issue_id foreign key issue  , username , display_name , created_date , created_date_zoned , message ( Patch , patch ) | issue_component : issue_id foreign key issue  , component | issue_fix_version : issue_id foreign key issue  , fix_version ( 0.12.1 ) | issue_link : source_issue_id foreign key issue  , target_issue_id foreign key issue  , name , outward_label , is_containment | change_set : commit_hash , git_repository_id , committed_date , committed_date_zoned , message , author , author_email , is_merge | change_set_link : commit_hash foreign key change_set'
 # ------------ MAIN PAGE ------------
 
 # Shows Available DBs
@@ -158,8 +161,7 @@ with st.form(key="my_form"):
         key="text_schema",
         help="SELECT JSON_ARRAYAGG( JSON_OBJECT( 'table', table_name, 'name', column_name ) ) FROM information_schema.columns WHERE table_name LIKE '%' and table_schema = 'DATABASE_NAME'",
     )
-    submit_button = st.form_submit_button("✨ Generate SQL ✨")
-    if submit_button:
+    if submit_button := st.form_submit_button("✨ Generate SQL ✨"):
         try:
             center_running()
             text_schema = st.session_state['text_schema']
@@ -167,8 +169,7 @@ with st.form(key="my_form"):
                 st.session_state['text_question'],
                 st.session_state['text_db_id'])
             st.code(output[0]['query'], language='sql')
-            execution_results = output[0]['execution_results']
-            if execution_results:
+            if execution_results := output[0]['execution_results']:
                 # convert execution_results to pandas dataframe
                 df = pd.DataFrame(execution_results)
                 # display dataframe
