@@ -104,6 +104,39 @@ with st.expander("🆙 Upload SQLite DB", True):
             f.write(uploaded_file.getbuffer())
         st.success("File successfully saved.")
 
+# Text2SQL Form
+with st.form(key="my_form"):
+    st.text_input(
+        "DB name:",
+        key="text_db_id",
+    )
+    st.text_input(
+        "Your question:",
+        key="text_question",
+        max_chars=100
+    )
+    st.text_area(
+        "Enter your schema:",
+        key="text_schema",
+        help="SELECT JSON_ARRAYAGG( JSON_OBJECT( 'table', table_name, 'name', column_name ) ) FROM information_schema.columns WHERE table_name LIKE '%' and table_schema = 'DATABASE_NAME'",
+    )
+    if submit_button := st.form_submit_button("✨ Generate SQL ✨"):
+        try:
+            center_running()
+            text_schema = st.session_state['text_schema']
+            output = client.get_translate(
+                st.session_state['text_question'],
+                st.session_state['text_db_id'])
+            st.code(output[0]['query'], language='sql')
+            if execution_results := output[0]['execution_results']:
+                # convert execution_results to pandas dataframe
+                df = pd.DataFrame(execution_results)
+                # display dataframe
+                st.dataframe(df)
+
+        except Exception as e:
+            st.error(f"🚧 Error:{e} 🚧")
+
 # Proxy DB Form
 with st.expander("⚾ Proxy DB", False):
     with st.form(key="mysql_form"):
@@ -144,54 +177,3 @@ with st.expander("⚾ Proxy DB", False):
                 "database": st.session_state['text_db_name'],
             }
             st.info(client.proxy_mysql(config))
-
-# Text2SQL Form
-with st.form(key="my_form"):
-    st.text_input(
-        "DB name:",
-        key="text_db_id",
-    )
-    st.text_input(
-        "Your question:",
-        key="text_question",
-        max_chars=100
-    )
-    st.text_area(
-        "Enter your schema:",
-        key="text_schema",
-        help="SELECT JSON_ARRAYAGG( JSON_OBJECT( 'table', table_name, 'name', column_name ) ) FROM information_schema.columns WHERE table_name LIKE '%' and table_schema = 'DATABASE_NAME'",
-    )
-    if submit_button := st.form_submit_button("✨ Generate SQL ✨"):
-        try:
-            center_running()
-            text_schema = st.session_state['text_schema']
-            output = client.get_translate(
-                st.session_state['text_question'],
-                st.session_state['text_db_id'])
-            st.code(output[0]['query'], language='sql')
-            if execution_results := output[0]['execution_results']:
-                # convert execution_results to pandas dataframe
-                df = pd.DataFrame(execution_results)
-                # display dataframe
-                st.dataframe(df)
-
-        except Exception as e:
-            st.error(f"🚧 Error:{e} 🚧")
-
-
-input_text = "How many singers do we have"
-encoder_out = [[571,  186, 7634,    7,  103,   62,   43,    1]][0][1:-1]
-
-output_text = "Wie viele Sänger haben wir?"
-decoder_out = [[0,  2739,  2584, 3324,   1745,   558,    58,     1]][0][2:-1]
-def normalize(x): return (x - np.min(x)) / (np.max(x) - np.min(x))
-
-
-st.write(format_word_importances(
-    words=input_text.split(),
-    importances=encoder_out/np.max(encoder_out),
-), unsafe_allow_html=True)
-st.write(format_word_importances(
-    words=output_text.split(),
-    importances=normalize(decoder_out),
-), unsafe_allow_html=True)
